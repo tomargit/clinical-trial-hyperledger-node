@@ -5,9 +5,6 @@ var methods = {};
 var _ =require('lodash');
 
 
-
-
-
 methods.encodeContent = function(content) {
 	let data = content;
 	let buff = new Buffer(data);  

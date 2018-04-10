@@ -1,6 +1,7 @@
 var express = require('express');
 var another = require('./index.js');
 var nodescript = require('./nodescript.js');
+var blockchainData = require('./blockchain_data.js');
 var async = require('async');
 
 var processContentJS = require('./processContent.js');
