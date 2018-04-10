@@ -1,0 +1,23 @@
+<h2>Loop</h2>
+
+
+
+<ul>
+
+	<%=trialDataList%>
+	<% for(var i = 0; i<trialDataList.length; i++)
+	{
+	%>
+	<br/>
+	<br/>
+	Patient - <%=i%>
+	<%
+		var trialData = trialDataList[i];
+		for (var trialKey in trialData) { %>
+		 <li>  <%=trialKey%>  -   <%=trialData[trialKey]%>
+		<%}		
+	}
+	%>
+
+    <li>df</li>
+</ul>
