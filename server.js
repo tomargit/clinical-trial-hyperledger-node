@@ -1,7 +1,7 @@
 var express = require('express');
 var another = require('./index.js');
 var nodescript = require('./nodescript.js');
-var blockchainData = require('./blockchain_data.js');
+//var blockchain = require('./blockchain.js');
 var async = require('async');
 
 var processContentJS = require('./processContent.js');
@@ -31,8 +31,42 @@ var reply = "false";
 
 app.get('/api/blockchain/save', function(req, res) {
 	
-	
-res.send(true);
+      const AdminConnection = require('composer-admin').AdminConnection;
+      const BusinessNetworkConnection = require('composer-client').BusinessNetworkConnection;
+      const BusinessNetworkDefinition = require('composer-common').BusinessNetworkDefinition;
+      const IdCard = require('composer-common').IdCard;
+      const MemoryCardStore = require('composer-common').MemoryCardStore;
+      const path = require('path');
+      let cardName;
+      let adminConnection;
+      let businessNetworkConnection;
+      let factory;
+      let events;
+      let businessNetworkName;
+      let businessNetworkDefinition;
+      const cardStore = new MemoryCardStore();
+      let adminBusinessNetworkName;
+      
+      businessNetworkConnection = new BusinessNetworkConnection('admin@clinical-trial-hyperledger');
+      
+	return businessNetworkConnection.connect('admin@clinical-trial-hyperledger')
+	.then( definition => {
+	    businessNetworkDefinition = definition;
+	    factory = businessNetworkConnection.getBusinessNetwork().getFactory();
+	}).then(()=>{
+	  
+	    return businessNetworkConnection.getParticipantRegistry('com.incedoinc.clinical_trial.User');
+	}).then(participantRegistry => {
+	  
+	    return participantRegistry.getAll();
+	}).then(participants => {
+	    console.log(participants);
+	}); 
+      
+	/*blockchain.methods.setBusinessNetworkName('clinical-trial-hyperledger');
+	blockchain.methods.createBusinessNetworkConnection('admin');
+	res.send(blockchain.methods.getAllParticipants());*/
+
 });
 
 
