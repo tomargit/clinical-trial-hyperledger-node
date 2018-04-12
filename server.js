@@ -28,122 +28,130 @@ var async = require('async');
 
 var reply = "false";
 
+//sample data
+/*
+ [{"Visit_ID": "VI_PA_TA1_1_1","Patient_ID": "PA_TA1_V_1","Site_Investigator_ID": "SI_TA1_TA2","Trail_ID": "TA1","Visit_Date": "43101.0","Visit_Time_In": "0.5083333333333333","Visit_Time_Out": "0.5208333333333334","Urobilinogen": "u","Bilirubin": "b","Ketone": "k","Blood": "b","Protien": "p","Nitrile": "n","Leukocytes": "l","SpecificGravity": "s","PH": "p","Microalbumin": "m"},{"Visit_ID": "VI_PA_TA1_1_2","Patient_ID": "PA_TA1_V_2","Site_Investigator_ID": "SI_TA1_TA3","Trail_ID": "TA1","Visit_Date": "43101.0","Visit_Time_In": "0.042361111111111106","Visit_Time_Out": "0.08541666666666665","Urobilinogen": "uu","Bilirubin": "bb","Ketone": "kk","Blood": "bb","Protien": "pp","Nitrile": "nn","Leukocytes": "ll","SpecificGravity": "ss","PH": "pp","Microalbumin": "mm"}] 
+*/
+/* blockchain variable  */
+const AdminConnection = require('composer-admin').AdminConnection;
+const BusinessNetworkConnection = require('composer-client').BusinessNetworkConnection;
+const BusinessNetworkDefinition = require('composer-common').BusinessNetworkDefinition;
+const IdCard = require('composer-common').IdCard;
+const MemoryCardStore = require('composer-common').MemoryCardStore;
+const path = require('path');
+let cardName;
+let adminConnection;
+let businessNetworkConnection  = new BusinessNetworkConnection('admin@clinical-trial-hyperledger');
+let adminBusinessNetworkConnection;
+let factory;
+let events;
+let businessNetworkName;
+let businessNetworkDefinition;
+const cardStore = new MemoryCardStore();
+let adminBusinessNetworkName;
+const namespace = 'com.incedoinc.clinical_trial';
+
 
 app.get('/api/blockchain/save', function(req, res) {
 	
-      const AdminConnection = require('composer-admin').AdminConnection;
-      const BusinessNetworkConnection = require('composer-client').BusinessNetworkConnection;
-      const BusinessNetworkDefinition = require('composer-common').BusinessNetworkDefinition;
-      const IdCard = require('composer-common').IdCard;
-      const MemoryCardStore = require('composer-common').MemoryCardStore;
-      const path = require('path');
-      let cardName;
-      let adminConnection;
-      let businessNetworkConnection;
-      let factory;
-      let events;
-      let businessNetworkName;
-      let businessNetworkDefinition;
-      const cardStore = new MemoryCardStore();
-      let adminBusinessNetworkName;
+	adminBusinessNetworkConnection = new BusinessNetworkConnection('admin@clinical-trial-hyperledger');
+	
+	//const data = [{"Visit_ID": "VI_PA_TA1_1_1","Patient_ID": "PA_TA1_V_1","Site_Investigator_ID": "SI_TA1_TA2","Trail_ID": "TA1","Visit_Date": "43101.0","Visit_Time_In": "0.5083333333333333","Visit_Time_Out": "0.5208333333333334","Urobilinogen": "u","Bilirubin": "b","Ketone": "k","Blood": "b","Protien": "p","Nitrile": "n","Leukocytes": "l","SpecificGravity": "s","PH": "p","Microalbumin": "m"},{"Visit_ID": "VI_PA_TA1_1_2","Patient_ID": "PA_TA1_V_2","Site_Investigator_ID": "SI_TA1_TA3","Trail_ID": "TA1","Visit_Date": "43101.0","Visit_Time_In": "0.042361111111111106","Visit_Time_Out": "0.08541666666666665","Urobilinogen": "uu","Bilirubin": "bb","Ketone": "kk","Blood": "bb","Protien": "pp","Nitrile": "nn","Leukocytes": "ll","SpecificGravity": "ss","PH": "pp","Microalbumin": "mm"}];
+	
+	const data = [{"Visit_ID": "VI_PA_TA1_1_1","Patient_ID": "user1","Site_Investigator_ID": "SI_TA1_TA2","Trail_ID": "TA1","Visit_Date": "43101.0","Visit_Time_In": "0.5083333333333333","Visit_Time_Out": "0.5208333333333334","Urobilinogen": "u","Bilirubin": "b","Ketone": "k","Blood": "b","Protien": "p","Nitrile": "n","Leukocytes": "l","SpecificGravity": "s","PH": "p","Microalbumin": "m"}];
+	
+	let participantRegistryPromise;
+	
+	for(let k in data)
+	{
+	  let v = data[k];
+	  //let patientId = v.Patient_ID;
+	  
+	  let patientId = 'user2';
+	  
+	  return adminBusinessNetworkConnection.connect('admin@clinical-trial-hyperledger')
+	    .then( definition => {
+		businessNetworkDefinition = definition;
+		factory = adminBusinessNetworkConnection.getBusinessNetwork().getFactory();
+	    }).then(()=>{
+		return adminBusinessNetworkConnection.getParticipantRegistry(namespace+'.User');
+	    }).then(participantRegistry => {
+	        participantRegistryPromise = participantRegistry;
+		return participantRegistry.exists(patientId);      
+	    }).then(status => {
+	      if(status)
+		{  
+		 return participantRegistryPromis.get(patientId)
+		  .then(user=>{ 
+		    console.log(user.userId); 
+		    return user; 
+		  });
+		} else
+		{  
+		  
+		  console.log('Create new User-------------');
+		  const patient = factory.newResource(namespace, 'User', patientId);
+		  patient.roles = 'PATIENT';
+		  return participantRegistryPromise.add(patient).then(()=>{
+		    return patient;
+		  });
+		}
+	    }).then((patient) => {
+	      console.log('test---------------->'+patient.userId);
+	    }); 
+	}  
+
+});
+
+
+
+
+app.get('/api/blockchain/get', function(req, res) {
+	
+	adminBusinessNetworkConnection = new BusinessNetworkConnection('admin@clinical-trial-hyperledger');
       
-      businessNetworkConnection = new BusinessNetworkConnection('admin@clinical-trial-hyperledger');
-      
-	return businessNetworkConnection.connect('admin@clinical-trial-hyperledger')
+	return adminBusinessNetworkConnection.connect('admin@clinical-trial-hyperledger')
 	.then( definition => {
 	    businessNetworkDefinition = definition;
-	    factory = businessNetworkConnection.getBusinessNetwork().getFactory();
+	    factory = adminBusinessNetworkConnection.getBusinessNetwork().getFactory();
 	}).then(()=>{
 	  
-	    return businessNetworkConnection.getParticipantRegistry('com.incedoinc.clinical_trial.User');
+	    return adminBusinessNetworkConnection.getParticipantRegistry('com.incedoinc.clinical_trial.User');
 	}).then(participantRegistry => {
 	  
 	    return participantRegistry.getAll();
 	}).then(participants => {
-	    console.log(participants);
+	    let participant = participants[0];
+	    res.send(participant.userId);
 	}); 
-      
-	/*blockchain.methods.setBusinessNetworkName('clinical-trial-hyperledger');
-	blockchain.methods.createBusinessNetworkConnection('admin');
-	res.send(blockchain.methods.getAllParticipants());*/
 
 });
 
+function importCardForIdentity(cardName, identity) {
+        const metadata = {
+            userName: identity.userID,
+            version: 1,
+            enrollmentSecret: identity.userSecret,
+            businessNetwork: businessNetworkName
+        };
+        const card = new IdCard(metadata, connectionProfile);
+        return adminConnection.importCard(cardName, card);
+}
 
-/*
-app.post('/api/blockchain/', function(req, res) {
-	console.log("POST API CALL");
-	
-	//console.log(typeof req.body);
+function useIdentity(cardName) {
+      return businessNetworkConnection.disconnect()
+            .then(() => {
+                businessNetworkConnection = new BusinessNetworkConnection({ cardStore: cardStore });
+				//businessNetworkConnection = new BusinessNetworkConnection();
+                events = [];
+                businessNetworkConnection.on('event', (event) => {
+                    events.push(event);
+                });
+                return businessNetworkConnection.connect(cardName);
+            })
+            .then(() => {
+                factory = businessNetworkConnection.getBusinessNetwork().getFactory();
+            });
+ }
 
-	var processData = processContentJS.data.processContent(req.body);
-	console.log("request Body is"+JSON.stringify(req.body));
-	for (var key in processData) {
-		var encodeDataHash= encodeDecoder.data.encodeContent(JSON.stringify(processData[key]['data_hash']));
-		
-		nodescript.data.addPatientDetails(processData[key]['Trail_ID'],processData[key]['Visit_ID'],processData[key]['Visit_ID'],processData[key]['Site_Investigator_ID'],processData[key]['Patient_ID'],encodeDataHash);
-		
-		console.log("")
-		console.log("Encoded String : " +  encodeDataHash)
-		console.log("")
-	}
-	res.send(processData);
-	  
-});  
-
-app.post('/api/generateReport', function(req, res) {
-	
-	console.log("POST API CALL");
-	var reqContent = req.body;
-	var processData = processContentJS.data.processContent(reqContent);
-	console.log("Proocess Data is"+JSON.stringify(processData[0]['data_hash']));
-	console.log("data fron UI is"+JSON.stringify(req.body)); 
-	
-var processData = processData[0]['data_hash'];
-
-var patientId = reqContent[0]['Patient_ID'];
-
-		asynResult = '';
-		async.waterfall(
-    [
-        function(callback) {
-			contractInstance.methods.viewCustomer(patientId).call().then(function (result){
-				callback(null,result,result);
-			});
-            
-        },
-        function(arg1, arg2, callback) {
-           // var caption = arg1 +' and '+ arg2;
-			console.log("Caption is"+arg1);
-			var caption=encodeDecoder.data.decodeContent(processData,arg1)
-            callback(null, caption);
-        }, 
-        function(caption, callback) {
-            //caption += ' Rock!';
-			console.log(" decoded data is"+caption);
-            callback(null, caption);
-        }
-    ],
-    function (err, caption) {
-		console.log('Comparison is **********  '+caption);
-		if(caption.length>0){
-			res.send("true");
-		}else{
-			res.send("false");
-		}
-		
-    }
-	
-);
-	  
-});
-
-app.get('/api/view/blockchain', function(req, res) {
-	var dataString ='[{"Visit_ID": "VI_PA_TA1_1_1","Patient_ID": "PA_TA1_1","Site_Investigator_ID": "SI_TA1_TA2","Trail_ID": "TA1","Visit_Date": "43101.0","Visit_Time_In": "0.5083333333333333","Visit_Time_Out": "0.5208333333333334","Urobilinogen": "u","Bilirubin": "b","Ketone": "k","Blood": "b","Protien": "p","Nitrile": "n","Leukocytes": "l","SpecificGravity": "s","PH": "p","Microalbumin": "m"},{"Visit_ID": "VI_PA_TA1_1_2","Patient_ID": "PA_TA1_1","Site_Investigator_ID": "SI_TA1_TA2","Trail_ID": "TA1","Visit_Date": "43132.0","Visit_Time_In": "0.5083333333333333","Visit_Time_Out": "0.5208333333333334","Urobilinogen": "u","Bilirubin": "b","Ketone": "k","Blood": "b","Protien": "p","Nitrile": "n","Leukocytes": "l","SpecificGravity": "s","PH": "p","Microalbumin": "m"},{"Visit_ID": "VI_PA_TA1_2_1","Patient_ID": "PA_TA1_2","Site_Investigator_ID": "SI_TA1_TA2","Trail_ID": "TA1","Visit_Date": "43101.0","Visit_Time_In": "0.5083333333333333","Visit_Time_Out": "0.5208333333333334","Urobilinogen": "u","Bilirubin": "b","Ketone": "k","Blood": "b","Protien": "p","Nitrile": "n","Leukocytes": "l","SpecificGravity": "s","PH": "p","Microalbumin": "m"},{"Visit_ID": "VI_PA_TA1_2_2","Patient_ID": "PA_TA1_2","Site_Investigator_ID": "SI_TA1_TA2","Trail_ID": "TA1","Visit_Date": "43132.0","Visit_Time_In": "0.5083333333333333","Visit_Time_Out": "0.5208333333333334","Urobilinogen": "u","Bilirubin": "b","Ketone": "k","Blood": "b","Protien": "p","Nitrile": "n","Leukocytes": "l","SpecificGravity": "s","PH": "p","Microalbumin": "m"},{"Visit_ID": "VI_PA_TA2_1_1","Patient_ID": "PA_TA2_1","Site_Investigator_ID": "SI_TA1_TA2","Trail_ID": "TA2","Visit_Date": "43115.0","Visit_Time_In": "0.5083333333333333","Visit_Time_Out": "0.5208333333333334","Urobilinogen": "u","Bilirubin": "b","Ketone": "k","Blood": "b","Protien": "p","Nitrile": "n","Leukocytes": "l","SpecificGravity": "s","PH": "p","Microalbumin": "m"},{"Visit_ID": "VI_PA_TA2_1_2","Patient_ID": "PA_TA2_1","Site_Investigator_ID": "SI_TA1_TA2","Trail_ID": "TA2","Visit_Date": "43146.0","Visit_Time_In": "0.5083333333333333","Visit_Time_Out": "0.5208333333333334","Urobilinogen": "u","Bilirubin": "b","Ketone": "k","Blood": "b","Protien": "p","Nitrile": "n","Leukocytes": "l","SpecificGravity": "s","PH": "p","Microalbumin": "m"},{"Visit_ID": "VI_PA_TA2_2_1","Patient_ID": "PA_TA2_2","Site_Investigator_ID": "SI_TA1_TA2","Trail_ID": "TA2","Visit_Date": "43120.0","Visit_Time_In": "0.5083333333333333","Visit_Time_Out": "0.5208333333333334","Urobilinogen": "u","Bilirubin": "b","Ketone": "k","Blood": "b","Protien": "p","Nitrile": "n","Leukocytes": "l","SpecificGravity": "s","PH": "p","Microalbumin": "m"},{"Visit_ID": "VI_PA_TB1_1_1","Patient_ID": "PA_TB1_1","Site_Investigator_ID": "SI_TB1","Trail_ID": "TB1","Visit_Date": "43120.0","Visit_Time_In": "0.5083333333333333","Visit_Time_Out": "0.5208333333333334","Urobilinogen": "u","Bilirubin": "b","Ketone": "k","Blood": "b","Protien": "p","Nitrile": "n","Leukocytes": "l","SpecificGravity": "s","PH": "p","Microalbumin": "m"},{"Visit_ID": "VI_PA_TB1_1_2","Patient_ID": "PA_TB1_1","Site_Investigator_ID": "SI_TB1","Trail_ID": "TB1","Visit_Date": "43151.0","Visit_Time_In": "0.5083333333333333","Visit_Time_Out": "0.5208333333333334","Urobilinogen": "u","Bilirubin": "b","Ketone": "k","Blood": "b","Protien": "p","Nitrile": "n","Leukocytes": "l","SpecificGravity": "s","PH": "p","Microalbumin": "m"},{"Visit_ID": "VI_PA_TB1_2_1","Patient_ID": "PA_TB1_2","Site_Investigator_ID": "SI_TB1","Trail_ID": "TB1","Visit_Date": "43125.0","Visit_Time_In": "0.5083333333333333","Visit_Time_Out": "0.5208333333333334","Urobilinogen": "u","Bilirubin": "b","Ketone": "k","Blood": "b","Protien": "p","Nitrile": "n","Leukocytes": "l","SpecificGravity": "s","PH": "p","Microalbumin": "m"}]';
-	console.log("GET API CALL");
-	res.render('./pages/blockchain', {
-       trialDataList: JSON.parse(dataString)
-    });
-});
-*/
 
