@@ -44,6 +44,7 @@ let adminConnection;
 let businessNetworkConnection  = new BusinessNetworkConnection('admin@clinical-trial-hyperledger');
 let adminBusinessNetworkConnection;
 let participantRegistryUser;
+let assetRegistry;
 let factory;
 let events;
 let businessNetworkName;
@@ -79,18 +80,26 @@ app.get('/api/blockchain/save', async (req, res, next) => {
 		  let patientId = v.Patient_ID;
 		  let investigatorId = v.Site_Investigator_ID;
 		  let visitId = v.Visit_ID;
+		  delete v.Visit_ID;
+		  delete v.Patient_ID;
+		  delete v.Site_Investigator_ID;
+		  let patient;
+		  let investigator;
+		  let visit;
+		  
 		  participantRegistry.exists(patientId)
 		  .then(status => {
 		      if(status)
 		      {  
 			return participantRegistryUser.get(patientId)
 			  .then(user=>{ 
+			    patient = user;
 			    console.log('Patient already exist ---- ');
 			    return user; 
 			  });
 		      } else
 		      {  
-			  const patient = factory.newResource(namespace, 'User', patientId);
+			  patient = factory.newResource(namespace, 'User', patientId);
 			  patient.roles = 'PATIENT';
 			  return participantRegistryUser.add(patient)
 			  .then(()=>{
@@ -112,14 +121,15 @@ app.get('/api/blockchain/save', async (req, res, next) => {
 			  {  
 			    return participantRegistryUser.get(investigatorId)
 			      .then(user=>{ 
+				investigator = user;
 				console.log('Investigator already exist ---- ');
 				return user; 
 			      });
 			  } else
 			  {  
-			      const patient = factory.newResource(namespace, 'User', investigatorId);
+			      investigator = factory.newResource(namespace, 'User', investigatorId);
 			      patient.roles = 'SITE_INVESTIGATOR';
-			      return participantRegistryUser.add(patient)
+			      return participantRegistryUser.add(investigator)
 			      .then(()=>{
 				console.log('New Investigator Added with id ---- '+investigatorId);
 				adminBusinessNetworkConnection.issueIdentity(namespace+'.User#'+investigatorId, investigatorId)
@@ -135,11 +145,33 @@ app.get('/api/blockchain/save', async (req, res, next) => {
 		      
 		    }).then(()=>{
 		        
-			const visit = factory.newResource();
-		      
+			return factory.newResource(namespace+'.Visit');
+		    }).then(visitAsset => {
+			
+			visit = visitAsset;
+			visit.visitId = visitId;
+			let kArr=[];
+			let vArr=[];
+			for(let key in v)
+			{
+			  kArr.push(key);
+			  vArr.push(v[key]);
+			}
+			visit.keys = kArr;
+			visit.values = vArr;
+			return factory.newRelationship(namespace, 'User', patient.$identifier);
+		    }).then(patientRelation=>{
+			visit.patient = patientRelation;
+			return factory.newRelationship(namespace, 'User', investigator.$identifier);
+		    }).then(investigatorRelation =>{	
+			visit.investigator = investigatorRelation;
+			return adminBusinessNetworkConnection.getAssetRegistry(namespace + '.Commodity');
+		    }).then((assetRegistry) => {
+			console.log('Add asset with visit id------------------ ' + visitId);
+			return assetRegistry.add(visit);
 		    });    
-		 }  
-	    }); 
+		 }
+	    });
 });
 
 

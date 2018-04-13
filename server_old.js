@@ -43,6 +43,8 @@ let cardName;
 let adminConnection;
 let businessNetworkConnection  = new BusinessNetworkConnection('admin@clinical-trial-hyperledger');
 let adminBusinessNetworkConnection;
+let participantRegistryUser;
+let assetRegistry;
 let factory;
 let events;
 let businessNetworkName;
@@ -50,57 +52,126 @@ let businessNetworkDefinition;
 const cardStore = new MemoryCardStore();
 let adminBusinessNetworkName;
 const namespace = 'com.incedoinc.clinical_trial';
+const connectionProfile = {"name":"hlfv1","type":"hlfv1","orderers":[{"url":"grpc://localhost:7050"}],"ca":{"url":"http://localhost:7054","name":"ca.org1.example.com"},"peers":[{"requestURL":"grpc://localhost:7051","eventURL":"grpc://localhost:7053"}],"channel":"composerchannel","mspID":"Org1MSP","timeout":300};
+adminConnection = new AdminConnection({ cardStore: cardStore });
 
 
-app.get('/api/blockchain/save', function(req, res) {
+app.get('/api/blockchain/save', async (req, res, next) => {
 	
 	adminBusinessNetworkConnection = new BusinessNetworkConnection('admin@clinical-trial-hyperledger');
 	
 	//const data = [{"Visit_ID": "VI_PA_TA1_1_1","Patient_ID": "PA_TA1_V_1","Site_Investigator_ID": "SI_TA1_TA2","Trail_ID": "TA1","Visit_Date": "43101.0","Visit_Time_In": "0.5083333333333333","Visit_Time_Out": "0.5208333333333334","Urobilinogen": "u","Bilirubin": "b","Ketone": "k","Blood": "b","Protien": "p","Nitrile": "n","Leukocytes": "l","SpecificGravity": "s","PH": "p","Microalbumin": "m"},{"Visit_ID": "VI_PA_TA1_1_2","Patient_ID": "PA_TA1_V_2","Site_Investigator_ID": "SI_TA1_TA3","Trail_ID": "TA1","Visit_Date": "43101.0","Visit_Time_In": "0.042361111111111106","Visit_Time_Out": "0.08541666666666665","Urobilinogen": "uu","Bilirubin": "bb","Ketone": "kk","Blood": "bb","Protien": "pp","Nitrile": "nn","Leukocytes": "ll","SpecificGravity": "ss","PH": "pp","Microalbumin": "mm"}];
 	
-	const data = [{"Visit_ID": "VI_PA_TA1_1_1","Patient_ID": "user1","Site_Investigator_ID": "SI_TA1_TA2","Trail_ID": "TA1","Visit_Date": "43101.0","Visit_Time_In": "0.5083333333333333","Visit_Time_Out": "0.5208333333333334","Urobilinogen": "u","Bilirubin": "b","Ketone": "k","Blood": "b","Protien": "p","Nitrile": "n","Leukocytes": "l","SpecificGravity": "s","PH": "p","Microalbumin": "m"}];
-	
-	let participantRegistryPromise;
-	
-	for(let k in data)
-	{
-	  let v = data[k];
-	  //let patientId = v.Patient_ID;
+	const data = [{"Visit_ID": "VI_PA_TA1_1_1","Patient_ID": "PA_TA1_V_3","Site_Investigator_ID": "SI_TA1_TA2","Trail_ID": "TA1","Visit_Date": "43101.0","Visit_Time_In": "0.5083333333333333","Visit_Time_Out": "0.5208333333333334","Urobilinogen": "u","Bilirubin": "b","Ketone": "k","Blood": "b","Protien": "p","Nitrile": "n","Leukocytes": "l","SpecificGravity": "s","PH": "p","Microalbumin": "m"},
+	{"Visit_ID": "VI_PA_TA1_1_2","Patient_ID": "PA_TA1_V_2","Site_Investigator_ID": "SI_TA1_TA3","Trail_ID": "TA1","Visit_Date": "43101.0","Visit_Time_In": "0.042361111111111106","Visit_Time_Out": "0.08541666666666665","Urobilinogen": "uu","Bilirubin": "bb","Ketone": "kk","Blood": "bb","Protien": "pp","Nitrile": "nn","Leukocytes": "ll","SpecificGravity": "ss","PH": "pp","Microalbumin": "mm"}];
 	  
-	  let patientId = 'user2';
-	  
-	  return adminBusinessNetworkConnection.connect('admin@clinical-trial-hyperledger')
+	  adminBusinessNetworkConnection.connect('admin@clinical-trial-hyperledger')
 	    .then( definition => {
 		businessNetworkDefinition = definition;
 		factory = adminBusinessNetworkConnection.getBusinessNetwork().getFactory();
 	    }).then(()=>{
 		return adminBusinessNetworkConnection.getParticipantRegistry(namespace+'.User');
 	    }).then(participantRegistry => {
-	        participantRegistryPromise = participantRegistry;
-		return participantRegistry.exists(patientId);      
-	    }).then(status => {
-	      if(status)
-		{  
-		 return participantRegistryPromis.get(patientId)
-		  .then(user=>{ 
-		    console.log(user.userId); 
-		    return user; 
-		  });
-		} else
-		{  
+	        participantRegistryUser = participantRegistry;
+		let userIds;
+		for(let k in data)
+		{
+		  let v = data[k];
+		  let patientId = v.Patient_ID;
+		  let investigatorId = v.Site_Investigator_ID;
+		  let visitId = v.Visit_ID;
+		  delete v.Visit_ID;
+		  delete v.Patient_ID;
+		  delete v.Site_Investigator_ID;
+		  let patient;
+		  let investigator;
+		  let visit;
 		  
-		  console.log('Create new User-------------');
-		  const patient = factory.newResource(namespace, 'User', patientId);
-		  patient.roles = 'PATIENT';
-		  return participantRegistryPromise.add(patient).then(()=>{
-		    return patient;
-		  });
-		}
-	    }).then((patient) => {
-	      console.log('test---------------->'+patient.userId);
-	    }); 
-	}  
-
+		  participantRegistry.exists(patientId)
+		  .then(status => {
+		      if(status)
+		      {  
+			return participantRegistryUser.get(patientId)
+			  .then(user=>{ 
+			    patient = user;
+			    console.log('Patient already exist ---- ');
+			    return user; 
+			  });
+		      } else
+		      {  
+			  patient = factory.newResource(namespace, 'User', patientId);
+			  patient.roles = 'PATIENT';
+			  return participantRegistryUser.add(patient)
+			  .then(()=>{
+			    console.log('New Patient Added with id ---- '+patientId);
+			    adminBusinessNetworkConnection.issueIdentity(namespace+'.User#'+patientId, patientId)
+			    .then(
+			      identity=>{
+				importCardForIdentity(patientId, identity);
+				console.log('New Patient identity imported ---- '+patientId);
+			      });
+			  });
+		      }
+		      
+		    }).then(()=>{
+		      
+		      participantRegistry.exists(investigatorId)
+		      .then(status => {
+			  if(status)
+			  {  
+			    return participantRegistryUser.get(investigatorId)
+			      .then(user=>{ 
+				investigator = user;
+				console.log('Investigator already exist ---- ');
+				return user; 
+			      });
+			  } else
+			  {  
+			      investigator = factory.newResource(namespace, 'User', investigatorId);
+			      patient.roles = 'SITE_INVESTIGATOR';
+			      return participantRegistryUser.add(investigator)
+			      .then(()=>{
+				console.log('New Investigator Added with id ---- '+investigatorId);
+				adminBusinessNetworkConnection.issueIdentity(namespace+'.User#'+investigatorId, investigatorId)
+				.then(
+				  identity=>{
+				    importCardForIdentity(investigatorId, identity);
+				    console.log('New Investigator identity imported ---- '+investigatorId);
+				  });
+			      });
+			  }
+			  
+			});
+		      
+		    }).then(()=>{
+		        
+			return factory.newResource(namespace+'.Visit');
+		    }).then(visitAsset => {
+			
+			visit = visitAsset;
+			visit.visitId = visitId;
+			let kArr=[];
+			let vArr=[];
+			for(let key in v)
+			{
+			  kArr.push(key);
+			  vArr.push(v[key]);
+			}
+			visit.keys = kArr;
+			visit.values = vArr;
+			return factory.newRelationship(namespace, 'User', patient.$identifier);
+		    }).then(patientRelation=>{
+			visit.patient = patientRelation;
+			return factory.newRelationship(namespace, 'User', investigator.$identifier);
+		    }).then(investigatorRelation =>{	
+			visit.investigator = investigatorRelation;
+			return adminBusinessNetworkConnection.getAssetRegistry(namespace + '.Commodity');
+		    }).then((assetRegistry) => {
+			console.log('Add asset with visit id------------------ ' + visitId);
+			return assetRegistry.add(visit);
+		    });    
+		 }
+	    });
 });
 
 
@@ -126,6 +197,7 @@ app.get('/api/blockchain/get', function(req, res) {
 	}); 
 
 });
+
 
 function importCardForIdentity(cardName, identity) {
         const metadata = {
