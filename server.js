@@ -62,8 +62,8 @@ app.get('/api/blockchain/save', async (req, res, next) => {
 	
 	//const data = [{"Visit_ID": "VI_PA_TA1_1_1","Patient_ID": "PA_TA1_V_1","Site_Investigator_ID": "SI_TA1_TA2","Trail_ID": "TA1","Visit_Date": "43101.0","Visit_Time_In": "0.5083333333333333","Visit_Time_Out": "0.5208333333333334","Urobilinogen": "u","Bilirubin": "b","Ketone": "k","Blood": "b","Protien": "p","Nitrile": "n","Leukocytes": "l","SpecificGravity": "s","PH": "p","Microalbumin": "m"},{"Visit_ID": "VI_PA_TA1_1_2","Patient_ID": "PA_TA1_V_2","Site_Investigator_ID": "SI_TA1_TA3","Trail_ID": "TA1","Visit_Date": "43101.0","Visit_Time_In": "0.042361111111111106","Visit_Time_Out": "0.08541666666666665","Urobilinogen": "uu","Bilirubin": "bb","Ketone": "kk","Blood": "bb","Protien": "pp","Nitrile": "nn","Leukocytes": "ll","SpecificGravity": "ss","PH": "pp","Microalbumin": "mm"}];
 	
-	const data = [{"Visit_ID": "VI_PA_TA1_1_1","Patient_ID": "PA_TA1_V_3","Site_Investigator_ID": "SI_TA1_TA2","Trail_ID": "TA1","Visit_Date": "43101.0","Visit_Time_In": "0.5083333333333333","Visit_Time_Out": "0.5208333333333334","Urobilinogen": "u","Bilirubin": "b","Ketone": "k","Blood": "b","Protien": "p","Nitrile": "n","Leukocytes": "l","SpecificGravity": "s","PH": "p","Microalbumin": "m"},
-	{"Visit_ID": "VI_PA_TA1_1_2","Patient_ID": "PA_TA1_V_2","Site_Investigator_ID": "SI_TA1_TA3","Trail_ID": "TA1","Visit_Date": "43101.0","Visit_Time_In": "0.042361111111111106","Visit_Time_Out": "0.08541666666666665","Urobilinogen": "uu","Bilirubin": "bb","Ketone": "kk","Blood": "bb","Protien": "pp","Nitrile": "nn","Leukocytes": "ll","SpecificGravity": "ss","PH": "pp","Microalbumin": "mm"}];
+	const data = [{"Visit_ID": "VI_PA_TA1_1_11","Patient_ID": "PA_TA1_V_11","Site_Investigator_ID": "SI_TA1_TA11","Trail_ID": "TA11","Visit_Date": "43101.0","Visit_Time_In": "0.5083333333333333","Visit_Time_Out": "0.5208333333333334","Urobilinogen": "u","Bilirubin": "b","Ketone": "k","Blood": "b","Protien": "p","Nitrile": "n","Leukocytes": "l","SpecificGravity": "s","PH": "p","Microalbumin": "m"},
+	{"Visit_ID": "VI_PA_TA1_1_12","Patient_ID": "PA_TA1_V_12","Site_Investigator_ID": "SI_TA1_TA12","Trail_ID": "TA12","Visit_Date": "43101.0","Visit_Time_In": "0.042361111111111106","Visit_Time_Out": "0.08541666666666665","Urobilinogen": "uu","Bilirubin": "bb","Ketone": "kk","Blood": "bb","Protien": "pp","Nitrile": "nn","Leukocytes": "ll","SpecificGravity": "ss","PH": "pp","Microalbumin": "mm"}];
 	  
 	  adminBusinessNetworkConnection.connect('admin@clinical-trial-hyperledger')
 	    .then( definition => {
@@ -80,9 +80,9 @@ app.get('/api/blockchain/save', async (req, res, next) => {
 		  let patientId = v.Patient_ID;
 		  let investigatorId = v.Site_Investigator_ID;
 		  let visitId = v.Visit_ID;
-		  delete v.Visit_ID;
+		  /*delete v.Visit_ID;
 		  delete v.Patient_ID;
-		  delete v.Site_Investigator_ID;
+		  delete v.Site_Investigator_ID;*/
 		  let patient;
 		  let investigator;
 		  let visit;
@@ -100,7 +100,7 @@ app.get('/api/blockchain/save', async (req, res, next) => {
 		      } else
 		      {  
 			  patient = factory.newResource(namespace, 'User', patientId);
-			  patient.roles = 'PATIENT';
+			  patient.role = 'PATIENT';
 			  return participantRegistryUser.add(patient)
 			  .then(()=>{
 			    console.log('New Patient Added with id ---- '+patientId);
@@ -128,7 +128,7 @@ app.get('/api/blockchain/save', async (req, res, next) => {
 			  } else
 			  {  
 			      investigator = factory.newResource(namespace, 'User', investigatorId);
-			      patient.roles = 'SITE_INVESTIGATOR';
+			      investigator.role = 'SITE_INVESTIGATOR';
 			      return participantRegistryUser.add(investigator)
 			      .then(()=>{
 				console.log('New Investigator Added with id ---- '+investigatorId);
@@ -145,7 +145,7 @@ app.get('/api/blockchain/save', async (req, res, next) => {
 		      
 		    }).then(()=>{
 		        
-			return factory.newResource(namespace+'.Visit');
+			return factory.newResource(namespace, 'Visit', visitId);
 		    }).then(visitAsset => {
 			
 			visit = visitAsset;
@@ -154,18 +154,21 @@ app.get('/api/blockchain/save', async (req, res, next) => {
 			let vArr=[];
 			for(let key in v)
 			{
-			  kArr.push(key);
-			  vArr.push(v[key]);
-			}
+                          if(k!='Visit_ID' || k!='Patient_ID' || k!='Site_Investigator_ID')
+                          {    
+                            kArr.push(key);
+                            vArr.push(v[key]);
+                          }  
+                        }
 			visit.keys = kArr;
 			visit.values = vArr;
-			return factory.newRelationship(namespace, 'User', patient.$identifier);
+			return factory.newRelationship(namespace, 'User', patientId);
 		    }).then(patientRelation=>{
 			visit.patient = patientRelation;
-			return factory.newRelationship(namespace, 'User', investigator.$identifier);
+			return factory.newRelationship(namespace, 'User', investigatorId);
 		    }).then(investigatorRelation =>{	
 			visit.investigator = investigatorRelation;
-			return adminBusinessNetworkConnection.getAssetRegistry(namespace + '.Commodity');
+			return adminBusinessNetworkConnection.getAssetRegistry(namespace + '.Visit');
 		    }).then((assetRegistry) => {
 			console.log('Add asset with visit id------------------ ' + visitId);
 			return assetRegistry.add(visit);
