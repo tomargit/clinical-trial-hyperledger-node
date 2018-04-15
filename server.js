@@ -1,11 +1,4 @@
 var express = require('express');
-var another = require('./index.js');
-var nodescript = require('./nodescript.js');
-//var blockchain = require('./blockchain.js');
-var async = require('async');
-
-var processContentJS = require('./processContent.js');
-var encodeDecoder = require('./encodedecode.js');
 var app = express();
 app.set('view engine', 'ejs');
 var port = process.env.PORT || 2000;
@@ -19,14 +12,6 @@ app.use(bodyParser.urlencoded({ extended: true }));
 console.log("Deployed on port------------>" + port);
 
 var methods = {};
-var _ =require('lodash');
-var processContentJS = require('./processContent.js');
-var encodeDecoder = require('./encodedecode.js');
-var finalresult;
-var result;
-var async = require('async');
-
-var reply = "false";
 
 //sample data
 /*
@@ -47,44 +32,65 @@ let participantRegistryUser;
 let assetRegistry;
 let factory;
 let events;
-let businessNetworkName;
+let businessNetworkName='clinical-trial-hyperledger';
 let businessNetworkDefinition;
 const cardStore = new MemoryCardStore();
 let adminBusinessNetworkName;
-const namespace = 'com.incedoinc.clinical_trial';
+const namespace = 'com.incedoinc.clinical';
 const connectionProfile = {"name":"hlfv1","type":"hlfv1","orderers":[{"url":"grpc://localhost:7050"}],"ca":{"url":"http://localhost:7054","name":"ca.org1.example.com"},"peers":[{"requestURL":"grpc://localhost:7051","eventURL":"grpc://localhost:7053"}],"channel":"composerchannel","mspID":"Org1MSP","timeout":300};
 adminConnection = new AdminConnection({ cardStore: cardStore });
 adminBusinessNetworkConnection = new BusinessNetworkConnection('admin@clinical-trial-hyperledger');
+
+//adminBusinessNetworkConnection.query('selectCommod',{userId : 'resource:com.incedoinc.clinical.User#PA_TA1_V_16'}) .then((results) => { 
+//console.log( results.length); });
+
 
 app.post('/blockchain/api/getVisitDataByUserId', function(req, res) {
         
 	console.log("GET VISIT DATA BY USER ID API CALL");
         
-        adminBusinessNetworkConnection.connect('admin@clinical-trial-hyperledger')
-	    .then( definition => {
-		businessNetworkDefinition = definition;
-		//factory = adminBusinessNetworkConnection.getBusinessNetwork().getFactory();
-	    }).then(()=>{
-		return adminBusinessNetworkConnection.getAssetRegistry(namespace+'.Visit');
-	    }).then(participantRegistry => {
-	        return participantRegistry.getAll();
-            }).then(participants => {
-                let data, length = participants.length;
-                for(let i=0; i<length; i++)
-                {
-                    p = participants[i];
-                    if(i==0)
-                        data = '{"'+'userId"'+': "'+p.userId+'", "'+'role"'+': "'+p.role+'"}';
-                    else
-                        data += ',{"'+'userId"'+': "'+p.userId+'", "'+'role"'+': "'+p.role+'"}';
-                }
-                if(data.length>0)
-                    data = '['+data+']';
-                console.log(data);
-               	res.render('./pages/blockchain', {
-                    participants: JSON.parse(data)
-                });
-            }); 
+        let userId = req.param('userId');
+        let role = req.param('role');
+        //console.log(req.body.role);
+        if(role=='PATIENT')
+        {    
+            adminBusinessNetworkConnection.connect('admin@clinical-trial-hyperledger')
+            .then(()=>
+            {
+               return adminBusinessNetworkConnection.query('selectVisitByPatient',{userId : 'resource:com.incedoinc.clinical.User#'+userId});
+                        
+            }).then((results) => {
+                 
+                let processData = getVisitData(results);
+                console.log(processData);
+                res.send(processData);
+            });
+        } else if (role=='SITE_INVESTIGATOR')
+        {
+            adminBusinessNetworkConnection.connect('admin@clinical-trial-hyperledger')
+            .then(()=>
+            {
+                return adminBusinessNetworkConnection.query('selectVisitByInvestigator',{userId : 'resource:com.incedoinc.clinical.User#'+userId});
+            }).then((results) => {
+                //console.log( results.length); 
+                let processData = getVisitData(results);
+                console.log(processData);
+                res.send(processData);
+            });
+        } else if (role=='CRO')
+        {
+            adminBusinessNetworkConnection.connect('admin@clinical-trial-hyperledger')
+            .then(()=>
+            {
+                return adminBusinessNetworkConnection.query('selectVisitByCRO');
+            }).then((results) => {
+                //console.log( results.length); 
+                let processData = getVisitData(results);
+                console.log(processData);
+                res.send(processData);
+            });
+        }    
+         
 });
 
 app.get('/blockchain/api/home', function(req, res) {
@@ -120,7 +126,7 @@ app.get('/blockchain/api/home', function(req, res) {
 
 app.get('/api/blockchain/save', async (req, res, next) => {
 	
-	let data = [{"Visit_ID": "VI_PA_TA1_1_15","Patient_ID": "PA_TA1_V_15","Site_Investigator_ID": "SI_TA1_TA15","Trail_ID": "TA15","Visit_Date": "43101.0","Visit_Time_In": "0.5083333333333333","Visit_Time_Out": "0.5208333333333334","Urobilinogen": "u","Bilirubin": "b","Ketone": "k","Blood": "b","Protien": "p","Nitrile": "n","Leukocytes": "l","SpecificGravity": "s","PH": "p","Microalbumin": "m"}];
+	let data = [{"Visit_ID": "VI_PA_TA1_1_16","Patient_ID": "PA_TA1_V_16","Site_Investigator_ID": "SI_TA1_TA16","Trail_ID": "TA16","Visit_Date": "43101.0","Visit_Time_In": "0.5083333333333333","Visit_Time_Out": "0.5208333333333334","Urobilinogen": "u","Bilirubin": "b","Ketone": "k","Blood": "b","Protien": "p","Nitrile": "n","Leukocytes": "l","SpecificGravity": "s","PH": "p","Microalbumin": "m"}];
 	  
 	  adminBusinessNetworkConnection.connect('admin@clinical-trial-hyperledger')
 	    .then( definition => {
@@ -181,6 +187,8 @@ function importCardForIdentity(cardName, identity) {
 function useIdentity(cardName) {
       return businessNetworkConnection.disconnect()
             .then(() => {
+                console.log('-------cardStore------------');
+                console.log(cardStore);
                 businessNetworkConnection = new BusinessNetworkConnection({ cardStore: cardStore });
 				//businessNetworkConnection = new BusinessNetworkConnection();
                 events = [];
@@ -194,11 +202,29 @@ function useIdentity(cardName) {
             });
  }
 
+ function getVisitData(visitData)
+{
+    let data=[], length = visitData.length;
+    for(let i=0; i<length; i++)
+    {
+       let p = visitData[i];
+       data[i] = {};
+       data[i]['visitId'] = p.visitId; 
+       data[i]['keys'] = [];
+       data[i]['keys'] = p.keys;
+       data[i]['values'] = p.values;
+       data[i]['patient'] = p.patient.$identifier;
+       data[i]['investigator'] = p.investigator.$identifier;
+    }   
+    return data;
+}
+
+
 
 function saveVisit(v)
 {
     let patientId = v.Patient_ID;
-		  let investigatorId = v.Site_Investigator_ID;
+    let investigatorId = v.Site_Investigator_ID;
 		  let visitId = v.Visit_ID;
 		  let patient;
 		  let investigator;
@@ -206,8 +232,43 @@ function saveVisit(v)
                   let patientStatus;
                   let investigatorStatus;
                   
-        return participantRegistryUser.exists(patientId)
-		  .then(status => {
+        return participantRegistryUser.exists(investigatorId)
+                .then(status => {
+                          investigatorStatus = status;
+			  if(status)
+			  { 
+                                console.log('investigator already exist ---- '+investigatorId); 
+                                return participantRegistryUser.get(investigatorId)
+			  } else
+			  {  
+                                return factory.newResource(namespace, 'User', investigatorId);
+			      
+			  }
+			  
+                    }).then((investigator)=>{
+                           if(!investigatorStatus)
+                           {    
+                                investigator.role = 'SITE_INVESTIGATOR';
+                                return participantRegistryUser.add(investigator);
+                           }
+                    }).then(()=>{
+                           if(!investigatorStatus)
+                           {
+                                console.log('New Investigator Added with id ---- '+investigatorId);
+                                return adminBusinessNetworkConnection.issueIdentity(namespace+'.User#'+investigatorId, investigatorId);
+                           }
+                        
+                    }).then(identity=>{
+                           if(!investigatorStatus)
+                           {    var currentTime = new Date().getTime();
+
+                                importCardForIdentity(investigatorId, identity);
+                                console.log('New Investigator identity imported ---- '+investigatorId);
+                           }   
+                    }).then(()=>{
+		      
+                        return participantRegistryUser.exists(patientId);
+                    }).then(status => {
                       
                       patientStatus = status;
                       if(status)
@@ -240,41 +301,27 @@ function saveVisit(v)
                             console.log('New Patient identity imported ---- '+patientId);
                         }
                     }).then(()=>{
-		      
-                        return participantRegistryUser.exists(investigatorId);
-		      
-		    }).then(status => {
-                          investigatorStatus = status;
-			  if(status)
-			  { 
-                                console.log('investigator already exist ---- '); 
-                                return participantRegistryUser.get(investigatorId)
-			  } else
-			  {  
-                                return factory.newResource(namespace, 'User', investigatorId);
-			      
-			  }
-			  
-                    }).then((investigator)=>{
-                           if(!investigatorStatus)
-                           {    
-                                investigator.role = 'SITE_INVESTIGATOR';
-                                return participantRegistryUser.add(investigator);
-                           }
+                            console.log('useIdentity-------------- '+investigatorId);
+                            //return useIdentity(investigatorId);
+                            return businessNetworkConnection.disconnect()
+                            
+                    }).then(() => {
+                      
+                            businessNetworkConnection = new BusinessNetworkConnection({ cardStore: cardStore });
+                                                //businessNetworkConnection = new BusinessNetworkConnection();
+                            events = [];
+                            businessNetworkConnection.on('event', (event) => {
+                                  events.push(event);
+                            });
+                            console.log('Before card Connect');
+                            return businessNetworkConnection.connect(cardName);
                     }).then(()=>{
-                           if(!investigatorStatus)
-                           {
-                                console.log('New Investigator Added with id ---- '+investigatorId);
-                                return adminBusinessNetworkConnection.issueIdentity(namespace+'.User#'+investigatorId, investigatorId);
-                           }
+                        console.log('get Factory');
+                        return businessNetworkConnection.getBusinessNetwork().getFactory();
                         
-                    }).then(identity=>{
-                           if(!investigatorStatus)
-                           {     
-                                importCardForIdentity(investigatorId, identity);
-                                console.log('New Investigator identity imported ---- '+investigatorId);
-                   
-                           }   
+                    }).then((f)=>{
+                        console.log('set factory');
+                         factory = f;   
                     }).then(()=>{
 		        
 			return factory.newResource(namespace, 'Visit', visitId);
@@ -306,3 +353,4 @@ function saveVisit(v)
 			return assetRegistry.add(visit);
 		    });
 }
+

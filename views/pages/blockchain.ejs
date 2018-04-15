@@ -1,5 +1,22 @@
 <html>
 <head>
+<style>
+table {
+    font-family: arial, sans-serif;
+    border-collapse: collapse;
+    width: 100%;
+}
+
+td, th {
+    border: 1px solid #dddddd;
+    text-align: left;
+    padding: 8px;
+}
+
+tr:nth-child(even) {
+    background-color: #dddddd;
+}
+</style>
 <script
 	src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
 <script>
@@ -28,26 +45,47 @@
 		});
 		$("#getData").click(function() {
 			console.log('click');
-			var formData = new FormData();
-			formData.append('userId', $('select').val());
-			formData.append('role', $('select option:selected').data('role'));
+			//var formData = new FormData();
+			//formData.append('userId', $('select').val());
+			//formData.append('role', $('select option:selected').data('role'));
 			//new FormData(document.getElementById("reportForm"))
+			var userId = $('select').val();
+			var role = $('select option:selected').data('role');
+			var data = {userId : userId, role : role};
+			
 			jQuery.ajax({
 				url : 'getVisitDataByUserId',
-				data : formData,
-				cache : false,
-				contentType : false,
-				processData : false,
+				data : data,
+				dataType: 'json',
 				method : 'POST',
 				success : function(data) {
 					console.log("success");
 					console.log(data);
-					//$('h4').remove();
-					console.log(data);
-					/*if(data=='true')
-						$("<h4>Report is not Tempered</h4>").insertAfter("#reportForm h2");
-					else
-						$("<h4 style='color: red;'>Report is Tempered</h4>").insertAfter("#reportForm h2");*/
+					if(data.length==0)
+                                            $('#content').html('No Visit Data Found');
+                                        else
+                                        {
+                                            var html = '<table><tr><th>Visit_ID</th><th>Patient_ID</th><th>Site_Investigator_ID</th><th>Trail_ID'
+                                            +'</th><th>Visit_Date</th><th>Visit_Time_In</th><th>Visit_Time_Out</th><th>Urobilinogen<'
+                                            +'/th><th>Bilirubin</th><th>Ketone</th><th>Blood</th><th>Protien</th><th>Nitrile</th><th>Leukocytes<'
+                                            +'/th><th>SpecificGravity</th><th>PH</th><th>Microalbumin</th></tr>';
+                                            
+                                            for(k in data)
+                                            {
+                                                
+                                                html += '<tr><td>'+data[k].visitId+'</td>'
+                                                html += '<td>'+data[k].patient+'</td>';
+                                                html += '<td>'+data[k].investigator+'</td>';
+                                                for(key in data[k].values)
+                                                {
+                                                    if(key > 2)
+                                                        html += '<td>'+data[k].values[key]+'</td>';
+                                                }
+                                                html += '</tr>';
+                                            }
+                                            html += '</table>';
+                                            $('#content').html(html);
+					}
 				},
 				complete : function(data) {
 					console.log("complete");
@@ -81,12 +119,17 @@
 					<%
                                             }
 					%>
+					<option value="CRO" data-role="CRO">CRO</option>
 				</select> 
 				<br /> <br /> 
 				<input type="button" value="Get Data"
 					id="getData" style="margin-left: 18%;"/>
 			</div>
 		</form>
+		<div id="content">
+                    
+                    
+		</div>
 	</div>
 </body>
 </html>
