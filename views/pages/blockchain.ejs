@@ -1,23 +1,92 @@
-<h2>Loop</h2>
-
-
-
-<ul>
-
-	<%=trialDataList%>
-	<% for(var i = 0; i<trialDataList.length; i++)
-	{
-	%>
-	<br/>
-	<br/>
-	Patient - <%=i%>
-	<%
-		var trialData = trialDataList[i];
-		for (var trialKey in trialData) { %>
-		 <li>  <%=trialKey%>  -   <%=trialData[trialKey]%>
-		<%}		
-	}
-	%>
-
-    <li>df</li>
-</ul>
+<html>
+<head>
+<script
+	src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+<script>
+	$(document).ready(function() {
+		$("#submit").click(function() {
+			console.log('click');
+			jQuery.ajax({
+				url : 'uploadServlet',
+				data : new FormData(document.getElementById("fileForm")),
+				enctype : 'multipart/form-data',
+				cache : false,
+				contentType : false,
+				processData : false,
+				method : 'POST',
+				success : function(data) {
+					console.log("success");
+					console.log(data);
+				},
+				complete : function(data) {
+					console.log("complete");
+				},
+				error : function(data) {
+					console.log("error");
+				}
+			});
+		});
+		$("#getData").click(function() {
+			console.log('click');
+			var formData = new FormData();
+			formData.append('userId', $('select').val());
+			formData.append('role', $('select option:selected').data('role'));
+			//new FormData(document.getElementById("reportForm"))
+			jQuery.ajax({
+				url : 'getVisitDataByUserId',
+				data : formData,
+				cache : false,
+				contentType : false,
+				processData : false,
+				method : 'POST',
+				success : function(data) {
+					console.log("success");
+					console.log(data);
+					//$('h4').remove();
+					console.log(data);
+					/*if(data=='true')
+						$("<h4>Report is not Tempered</h4>").insertAfter("#reportForm h2");
+					else
+						$("<h4 style='color: red;'>Report is Tempered</h4>").insertAfter("#reportForm h2");*/
+				},
+				complete : function(data) {
+					console.log("complete");
+				},
+				error : function(data) {
+					console.log("error");
+				}
+			});
+		});
+	});
+	
+</script>
+<title>File Uploading Form</title>
+</head>
+<body> 
+	<h1>Clinical Trial Hyperledger</h1>
+	<div style="margin-top: 5%;">
+		<form action="generateReport" method="post"
+			enctype="multipart/form-data" id="reportForm">
+			<div style="margin-left: 30%;">
+				<label>Select User: </label> <select style="margin-top: 1%;"
+					name="userId">
+					
+					
+					<%
+                                            for(var i=0; i<participants.length; i++)
+                                            {
+                                                var userId = participants[i].userId, role = participants[i].role;
+					%>
+                                                <option value='<%=userId%>' data-role='<%=role%>'><%=userId%>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<%=role%></option>
+					<%
+                                            }
+					%>
+				</select> 
+				<br /> <br /> 
+				<input type="button" value="Get Data"
+					id="getData" style="margin-left: 18%;"/>
+			</div>
+		</form>
+	</div>
+</body>
+</html>
