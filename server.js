@@ -40,6 +40,8 @@ const cardStore = new MemoryCardStore();
 let businessNetworkConnection = new BusinessNetworkConnection({
     cardStore: cardStore
 });
+let reqData=[];
+let index=0;
 let adminBusinessNetworkName;
 const namespace = 'com.incedoinc.clinical';
 const connectionProfile = {
@@ -148,10 +150,10 @@ app.get('/blockchain/api/home', function (req, res) {
 app.get('/api/blockchain/save', async (req, res, next) => {
 
     let data = [{
-        "Visit_ID": "VI_PA_TA1_1_13",
-        "Patient_ID": "PA_TA1_V_13",
-        "Site_Investigator_ID": "SI_TA1_TA13",
-        "Trail_ID": "TA13",
+        "Visit_ID": "VI_PA_TA1_1_16",
+        "Patient_ID": "PA_TA1_V_16",
+        "Site_Investigator_ID": "SI_TA1_TA16",
+        "Trail_ID": "TA16",
         "Visit_Date": "43101.0",
         "Visit_Time_In": "0.5083333333333333",
         "Visit_Time_Out": "0.5208333333333334",
@@ -167,10 +169,10 @@ app.get('/api/blockchain/save', async (req, res, next) => {
         "Microalbumin": "m"
     },
 	{
-        "Visit_ID": "VI_PA_TA1_1_14",
-        "Patient_ID": "PA_TA1_V_14",
-        "Site_Investigator_ID": "SI_TA1_TA14",
-        "Trail_ID": "TA14",
+        "Visit_ID": "VI_PA_TA1_1_17",
+        "Patient_ID": "PA_TA1_V_17",
+        "Site_Investigator_ID": "SI_TA1_TA17",
+        "Trail_ID": "TA17",
         "Visit_Date": "43101.0",
         "Visit_Time_In": "0.5083333333333333",
         "Visit_Time_Out": "0.5208333333333334",
@@ -185,7 +187,7 @@ app.get('/api/blockchain/save', async (req, res, next) => {
         "PH": "p",
         "Microalbumin": "m"
     }];
-
+    console.log('Save API Call');	
     adminBusinessNetworkConnection.connect('admin@clinical-trial-hyperledger')
         .then(definition => {
             businessNetworkDefinition = definition;
@@ -194,11 +196,12 @@ app.get('/api/blockchain/save', async (req, res, next) => {
             return adminBusinessNetworkConnection.getParticipantRegistry(namespace + '.User');
         }).then(participantRegistry => {
             participantRegistryUser = participantRegistry;
-            for (let k in data) {
+            //for (let k in data) {
 
-                let v = data[k];
-                saveVisit(v);
-            }
+                //let v = data[k];
+		reqData = data;
+                saveVisit();
+            //}
         }).then(() => {
             res.send(true);
         });
@@ -279,7 +282,11 @@ function getVisitData(visitData) {
 
 
 
-function saveVisit(v) {
+function saveVisit() {
+    console.log('saveVisit Method Call');		
+    if(index>= reqData.length)
+	return;		
+    v=reqData[index];	
     let patientId = v.Patient_ID;
     let investigatorId = v.Site_Investigator_ID;
     let visitId = v.Visit_ID;
@@ -378,6 +385,10 @@ function saveVisit(v) {
                 }).then((assetRegistry) => {
                     console.log('Add asset with visit id------------------ ' + visitId);
                     return assetRegistry.add(visit);
-                })
+                }).then(()=>{
+			index++;
+			saveVisit();	
+			console.log('index------------'+index);	
+		});
         });
 }
