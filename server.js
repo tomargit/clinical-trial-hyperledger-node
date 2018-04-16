@@ -28,9 +28,7 @@ const MemoryCardStore = require('composer-common').MemoryCardStore;
 const path = require('path');
 let cardName;
 let adminConnection;
-let businessNetworkConnection = new BusinessNetworkConnection({
-    cardStore: cardStore
-});
+
 let adminBusinessNetworkConnection;
 let participantRegistryUser;
 let assetRegistry;
@@ -39,6 +37,9 @@ let events;
 let businessNetworkName = 'clinical-trial-hyperledger';
 let businessNetworkDefinition;
 const cardStore = new MemoryCardStore();
+let businessNetworkConnection = new BusinessNetworkConnection({
+    cardStore: cardStore
+});
 let adminBusinessNetworkName;
 const namespace = 'com.incedoinc.clinical';
 const connectionProfile = {
@@ -147,10 +148,29 @@ app.get('/blockchain/api/home', function (req, res) {
 app.get('/api/blockchain/save', async (req, res, next) => {
 
     let data = [{
-        "Visit_ID": "VI_PA_TA1_1_16",
-        "Patient_ID": "PA_TA1_V_16",
-        "Site_Investigator_ID": "SI_TA1_TA16",
-        "Trail_ID": "TA16",
+        "Visit_ID": "VI_PA_TA1_1_13",
+        "Patient_ID": "PA_TA1_V_13",
+        "Site_Investigator_ID": "SI_TA1_TA13",
+        "Trail_ID": "TA13",
+        "Visit_Date": "43101.0",
+        "Visit_Time_In": "0.5083333333333333",
+        "Visit_Time_Out": "0.5208333333333334",
+        "Urobilinogen": "u",
+        "Bilirubin": "b",
+        "Ketone": "k",
+        "Blood": "b",
+        "Protien": "p",
+        "Nitrile": "n",
+        "Leukocytes": "l",
+        "SpecificGravity": "s",
+        "PH": "p",
+        "Microalbumin": "m"
+    },
+	{
+        "Visit_ID": "VI_PA_TA1_1_14",
+        "Patient_ID": "PA_TA1_V_14",
+        "Site_Investigator_ID": "SI_TA1_TA14",
+        "Trail_ID": "TA14",
         "Visit_Date": "43101.0",
         "Visit_Time_In": "0.5083333333333333",
         "Visit_Time_Out": "0.5208333333333334",
