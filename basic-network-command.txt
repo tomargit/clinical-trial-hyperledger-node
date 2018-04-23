@@ -1,0 +1,89 @@
+const AdminConnection = require('composer-admin').AdminConnection;
+const BusinessNetworkConnection = require('composer-client').BusinessNetworkConnection;
+const BusinessNetworkDefinition = require('composer-common').BusinessNetworkDefinition;
+const IdCard = require('composer-common').IdCard;
+const MemoryCardStore = require('composer-common').MemoryCardStore;
+const path = require('path');
+const adminCardName = 'admin';
+let adminConnection;
+let businessNetworkConnection;
+let factory;
+const aliceCardName = 'alice';
+const bobCardName = 'bob';
+let events;
+let businessNetworkName;
+let businessNetworkDefinition;
+const cardStore = new MemoryCardStore();
+//businessNetworkConnection = new BusinessNetworkConnection({ cardStore: cardStore });
+businessNetworkConnection = new BusinessNetworkConnection('admin@basic-sample-network');
+businessNetworkConnection.connect('admin@basic-sample-network');
+factory = businessNetworkConnection.getBusinessNetwork().getFactory();
+businessNetworkConnection.getParticipantRegistry('org.acme.sample.SampleParticipant').then(participantRegistry=>{ const alice = factory.newResource('org.acme.sample', 'SampleParticipant', 'alice@email.com'); alice.firstName = 'Alice'; alice.lastName = 'A'; const bob = factory.newResource('org.acme.sample', 'SampleParticipant', 'bob@email.com'); bob.firstName = 'Bob'; bob.lastName = 'B'; participantRegistry.addAll([alice, bob]); });
+businessNetworkConnection.getAssetRegistry('org.acme.sample.SampleAsset').then(assetRegistry=>{const asset1 = factory.newResource('org.acme.sample', 'SampleAsset', '1'); asset1.owner = factory.newRelationship('org.acme.sample', 'SampleParticipant', 'alice@email.com'); asset1.value = '10'; const asset2 = factory.newResource('org.acme.sample', 'SampleAsset', '2'); asset2.owner = factory.newRelationship('org.acme.sample', 'SampleParticipant', 'bob@email.com'); asset2.value = '20'; assetRegistry.addAll([asset1, asset2]); });
+BusinessNetworkDefinition.fromDirectory(path.resolve('/home/tomar/Desktop/work/blockchain/hyperledger/hyperledger-composer/composer-sample-networks/packages/basic-sample-network', '')).then(definition=>{businessNetworkDefinition = definition;  businessNetworkName = definition.getName();})
+//const connectionProfile = { name: 'embedded', type: 'embedded'};
+const connectionProfile = {"name":"hlfv1","type":"hlfv1","orderers":[{"url":"grpc://localhost:7050"}],"ca":{"url":"http://localhost:7054","name":"ca.org1.example.com"},"peers":[{"requestURL":"grpc://localhost:7051","eventURL":"grpc://localhost:7053"}],"channel":"composerchannel","mspID":"Org1MSP","timeout":300};
+adminConnection = new AdminConnection({ cardStore: cardStore });	
+function importCardForIdentity(cardName, identity) {
+        const metadata = {
+            userName: identity.userID,
+            version: 1,
+            enrollmentSecret: identity.userSecret,
+            businessNetwork: businessNetworkName
+        };
+        const card = new IdCard(metadata, connectionProfile);
+        return adminConnection.importCard(cardName, card);
+    }
+
+businessNetworkConnection.issueIdentity('org.acme.sample.SampleParticipant#alice@email.com', 'alice1').then(identity=>{importCardForIdentity(aliceCardName, identity)});
+businessNetworkConnection.issueIdentity('org.acme.sample.SampleParticipant#bob@email.com', 'bob1').then(identity=>{importCardForIdentity(bobCardName, identity)});
+function useIdentity(cardName) {
+      return businessNetworkConnection.disconnect()
+            .then(() => {
+                businessNetworkConnection = new BusinessNetworkConnection({ cardStore: cardStore });
+				//businessNetworkConnection = new BusinessNetworkConnection();
+                events = [];
+                businessNetworkConnection.on('event', (event) => {
+                    events.push(event);
+                });
+                return businessNetworkConnection.connect(cardName);
+            })
+            .then(() => {
+                factory = businessNetworkConnection.getBusinessNetwork().getFactory();
+            });
+ }
+//useIdentity(aliceCardName).then(() => { return businessNetworkConnection.getAssetRegistry('org.acme.sample.SampleAsset')}).then((assetRegistry) => { return assetRegistry.getAll(); }).then((assets) => { assets.should.have.lengthOf(2); const asset1 = assets[0]; asset1.owner.getFullyQualifiedIdentifier().should.equal('org.acme.sample.SampleParticipant#alice@email.com'); asset1.value.should.equal('10'); const asset2 = assets[1]; asset2.owner.getFullyQualifiedIdentifier().should.equal('org.acme.sample.SampleParticipant#bob@email.com'); asset2.value.should.equal('20');});
+useIdentity(aliceCardName).then(() => { return businessNetworkConnection.getAssetRegistry('org.acme.sample.SampleAsset')}).then((assetRegistry) => { return assetRegistry.getAll(); }).then((assets) => { const asset1 = assets[0]; console.log(asset1.value == '10');});
+useIdentity(aliceCardName).then(() => { const asset3 = factory.newResource('org.acme.sample', 'SampleAsset', '3'); asset3.owner = factory.newRelationship('org.acme.sample', 'SampleParticipant', 'alice@email.com'); asset3.value = '30'; return businessNetworkConnection.getAssetRegistry('org.acme.sample.SampleAsset').then((assetRegistry) => { return assetRegistry.add(asset3).then(() => {return assetRegistry.get('3');});});}).then((asset3) => { asset3.owner.getFullyQualifiedIdentifier().should.equal('org.acme.sample.SampleParticipant#alice@email.com'); asset3.value.should.equal('30');}); 
+//while Alice cannot add for Bob
+useIdentity(aliceCardName).then(() => { const asset3 = factory.newResource('org.acme.sample', 'SampleAsset', '3'); asset3.owner = factory.newRelationship('org.acme.sample', 'SampleParticipant', 'bob@email.com'); asset3.value = '30'; return businessNetworkConnection.getAssetRegistry('org.acme.sample.SampleAsset').then((assetRegistry) => { return assetRegistry.add(asset3).then(() => {return assetRegistry.get('3');});});});
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

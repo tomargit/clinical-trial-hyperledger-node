@@ -1,0 +1,83 @@
+const AdminConnection = require('composer-admin').AdminConnection;
+const BusinessNetworkConnection = require('composer-client').BusinessNetworkConnection;
+const BusinessNetworkDefinition = require('composer-common').BusinessNetworkDefinition;
+const IdCard = require('composer-common').IdCard;
+const MemoryCardStore = require('composer-common').MemoryCardStore;
+const path = require('path');
+const adminCardName = 'admin';
+let adminConnection;
+let businessNetworkConnection;
+let factory;
+const manishCardName = 'alice';
+const sachinCardName = 'bob';
+let events;
+let businessNetworkName;
+let businessNetworkDefinition;
+const namespace = 'org.acme.trading';
+const cardStore = new MemoryCardStore();
+//businessNetworkConnection = new BusinessNetworkConnection({ cardStore: cardStore });
+businessNetworkConnection = new BusinessNetworkConnection('admin@trade-network');
+businessNetworkConnection.connect('admin@trade-network');
+factory = businessNetworkConnection.getBusinessNetwork().getFactory();
+const manish = factory.newResource(namespace, 'Trader', 'manish@email.com');
+manish.firstName = 'Manish';
+manish.lastName = 'Tomar';
+const sachin = factory.newResource(namespace, 'Trader', 'sachin@email.com');
+sachin.firstName = 'Sachin';
+sachin.lastName = 'Sharma';
+const mCommodity = factory.newResource(namespace, 'Commodity', 'SYSTEM_HARDWARE');
+mCommodity.description = 'Monitor';
+mCommodity.mainExchange = 'INR';
+mCommodity.quantity = 100;
+mCommodity.owner = factory.newRelationship(namespace, 'Trader', manish.$identifier);
+const mTrade = factory.newTransaction(namespace, 'Trade');
+mTrade.newOwner = factory.newRelationship(namespace, 'Trader', manish.$identifier);
+mTrade.commodity = factory.newRelationship(namespace, 'Commodity', mCommodity.$identifier);
+commodity.owner.$identifier.should.equal(dan.$identifier);
+
+const sCommodity = factory.newResource(namespace, 'Commodity', 'SYSTEM_HARDWARE_KEYBOARD');
+sCommodity.description = 'Keyboard';
+sCommodity.mainExchange = 'Chillad';
+sCommodity.quantity = 50;
+sCommodity.owner = factory.newRelationship(namespace, 'Trader', sachin.$identifier);
+
+businessNetworkConnection.getAssetRegistry(namespace + '.Commodity').then((assetRegistry) => { return assetRegistry.addAll([mCommodity, sCommodity]);}).then(() => { return businessNetworkConnection.getParticipantRegistry(namespace + '.Trader'); }).then((participantRegistry) => { return participantRegistry.addAll([manish, sachin]); }).then(() => { return businessNetworkConnection.submitTransaction(mTrade); });
+
+BusinessNetworkDefinition.fromDirectory(path.resolve('/home/manish/Desktop/work/hyperledger/hyperledger-composer/composer-sample-networks/packages/trade-network', '')).then(definition=>{businessNetworkDefinition = definition;  businessNetworkName = definition.getName();})
+
+const connectionProfile = {"name":"hlfv1","type":"hlfv1","orderers":[{"url":"grpc://localhost:7050"}],"ca":{"url":"http://localhost:7054","name":"ca.org1.example.com"},"peers":[{"requestURL":"grpc://localhost:7051","eventURL":"grpc://localhost:7053"}],"channel":"composerchannel","mspID":"Org1MSP","timeout":300};
+adminConnection = new AdminConnection({ cardStore: cardStore });	
+function importCardForIdentity(cardName, identity) {
+        const metadata = {
+            userName: identity.userID,
+            version: 1,
+            enrollmentSecret: identity.userSecret,
+            businessNetwork: businessNetworkName
+        };
+        const card = new IdCard(metadata, connectionProfile);
+        return adminConnection.importCard(cardName, card);
+}
+
+businessNetworkConnection.issueIdentity(namespace+'.Trader#manish@email.com', 'manishTRD1').then(identity=>{importCardForIdentity('manish', identity)});
+
+businessNetworkConnection.issueIdentity(namespace+'.Trader#sachin@email.com', 'sachinTRD1').then(identity=>{importCardForIdentity('sachin', identity)});
+
+function useIdentity(cardName) {
+      return businessNetworkConnection.disconnect()
+            .then(() => {
+                businessNetworkConnection = new BusinessNetworkConnection({ cardStore: cardStore });
+				//businessNetworkConnection = new BusinessNetworkConnection();
+                events = [];
+                businessNetworkConnection.on('event', (event) => {
+                    events.push(event);
+                });
+                return businessNetworkConnection.connect(cardName);
+            })
+            .then(() => {
+                factory = businessNetworkConnection.getBusinessNetwork().getFactory();
+            });
+ }
+
+
+useIdentity('manish').then(() => { return businessNetworkConnection.getParticipantRegistry('org.acme.trading.Trader')}).then((participantRegistry) => { return participantRegistry.getAll(); }).then((participant) => { console.log(participant);});
+
